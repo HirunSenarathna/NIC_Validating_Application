@@ -5,6 +5,7 @@ import com.mobios.nicservice.repository.NICRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
@@ -73,7 +74,7 @@ public class NICValidationService {
 
         try {
             // Check if it's old format (9 digits + V) or new format (12 digits)
-            if (nicNumber.length() == 10 && nicNumber.endsWith("V")) {
+            if (nicNumber.length() == 10 && nicNumber.endsWith("V") || nicNumber.endsWith("X")) {
                 return validateOldFormatNIC(nicNumber);
             } else if (nicNumber.length() == 12 && nicNumber.matches("\\d{12}")) {
                 return validateNewFormatNIC(nicNumber);
@@ -86,16 +87,32 @@ public class NICValidationService {
     }
 
     private NICValidationResult validateOldFormatNIC(String nic) {
-        // Extract year, day of year, and gender
+        // Extract year, day of year
         String yearStr = nic.substring(0, 2);
         String dayStr = nic.substring(2, 5);
 
-        int year = Integer.parseInt(yearStr);
-        int dayOfYear = Integer.parseInt(dayStr);
+        int year;
+        try {
+            year = Integer.parseInt(yearStr);
+        } catch (NumberFormatException e) {
+            System.out.println("NIC invalid: Invalid year format in NIC " + nic);
+            return new NICValidationResult(false, null, null, null);
+        }
+
+        int dayOfYear;
+        try {
+            dayOfYear = Integer.parseInt(dayStr);
+        } catch (NumberFormatException e) {
+            System.out.println("NIC invalid: Invalid day format in NIC " + nic);
+            return new NICValidationResult(false, null, null, null);
+        }
 
         // Determine century (assume birth year is between 1900-2099)
         if (year >= 0 && year <= 99) {
             year = (year <= 25) ? 2000 + year : 1900 + year;
+        } else {
+            System.out.println("NIC invalid: Year out of valid range in NIC " + nic);
+            return new NICValidationResult(false, null, null, null);
         }
 
         // Determine gender
@@ -109,25 +126,49 @@ public class NICValidationService {
 
         // Validate day of year
         if (dayOfYear < 1 || dayOfYear > 366) {
+            System.out.println("NIC invalid: Day of year " + dayOfYear + " out of range in NIC " + nic);
             return new NICValidationResult(false, null, null, null);
         }
 
-        // Calculate birthday
-        LocalDate birthday = LocalDate.ofYearDay(year, dayOfYear);
+        // Explicit leap year check
+        boolean isLeapYear = LocalDate.of(year, 1, 1).isLeapYear();
+        if (dayOfYear == 366 && !isLeapYear) {
+            System.out.println("NIC invalid: Day 366 provided for non-leap year " + year + " in NIC " + nic);
+            return new NICValidationResult(false, null, null, null);
+        }
 
-        // Calculate age
-        int age = Period.between(birthday, LocalDate.now()).getYears();
-
-        return new NICValidationResult(true, birthday, age, gender);
+        try {
+            // Calculate birthday
+            LocalDate birthday = LocalDate.ofYearDay(year, dayOfYear);
+            // Calculate age
+            int age = Period.between(birthday, LocalDate.now()).getYears();
+            return new NICValidationResult(true, birthday, age, gender);
+        } catch (DateTimeException e) {
+            System.out.println("NIC invalid: Invalid date for NIC " + nic + " - " + e.getMessage());
+            return new NICValidationResult(false, null, null, null);
+        }
     }
 
     private NICValidationResult validateNewFormatNIC(String nic) {
-        // Extract year, day of year, and gender
+        // Extract year, day of year
         String yearStr = nic.substring(0, 4);
         String dayStr = nic.substring(4, 7);
 
-        int year = Integer.parseInt(yearStr);
-        int dayOfYear = Integer.parseInt(dayStr);
+        int year;
+        try {
+            year = Integer.parseInt(yearStr);
+        } catch (NumberFormatException e) {
+            System.out.println("NIC invalid: Invalid year format in NIC " + nic);
+            return new NICValidationResult(false, null, null, null);
+        }
+
+        int dayOfYear;
+        try {
+            dayOfYear = Integer.parseInt(dayStr);
+        } catch (NumberFormatException e) {
+            System.out.println("NIC invalid: Invalid day format in NIC " + nic);
+            return new NICValidationResult(false, null, null, null);
+        }
 
         // Determine gender
         String gender;
@@ -140,17 +181,95 @@ public class NICValidationService {
 
         // Validate day of year
         if (dayOfYear < 1 || dayOfYear > 366) {
+            System.out.println("NIC invalid: Day of year " + dayOfYear + " out of range in NIC " + nic);
             return new NICValidationResult(false, null, null, null);
         }
 
-        // Calculate birthday
-        LocalDate birthday = LocalDate.ofYearDay(year, dayOfYear);
+        // Explicit leap year check
+        boolean isLeapYear = LocalDate.of(year, 1, 1).isLeapYear();
+        if (dayOfYear == 366 && !isLeapYear) {
+            System.out.println("NIC invalid: Day 366 provided for non-leap year " + year + " in NIC " + nic);
+            return new NICValidationResult(false, null, null, null);
+        }
 
-        // Calculate age
-        int age = Period.between(birthday, LocalDate.now()).getYears();
-
-        return new NICValidationResult(true, birthday, age, gender);
+        try {
+            // Calculate birthday
+            LocalDate birthday = LocalDate.ofYearDay(year, dayOfYear);
+            // Calculate age
+            int age = Period.between(birthday, LocalDate.now()).getYears();
+            return new NICValidationResult(true, birthday, age, gender);
+        } catch (DateTimeException e) {
+            System.out.println("NIC invalid: Invalid date for NIC " + nic + " - " + e.getMessage());
+            return new NICValidationResult(false, null, null, null);
+        }
     }
+
+//    private NICValidationResult validateOldFormatNIC(String nic) {
+//        // Extract year, day of year, and gender
+//        String yearStr = nic.substring(0, 2);
+//        String dayStr = nic.substring(2, 5);
+//
+//        int year = Integer.parseInt(yearStr);
+//        int dayOfYear = Integer.parseInt(dayStr);
+//
+//        // Determine century (assume birth year is between 1900-2099)
+//        if (year >= 0 && year <= 99) {
+//            year = (year <= 25) ? 2000 + year : 1900 + year;
+//        }
+//
+//        // Determine gender
+//        String gender;
+//        if (dayOfYear > 500) {
+//            gender = "Female";
+//            dayOfYear -= 500;
+//        } else {
+//            gender = "Male";
+//        }
+//
+//        // Validate day of year
+//        if (dayOfYear < 1 || dayOfYear > 366) {
+//            return new NICValidationResult(false, null, null, null);
+//        }
+//
+//        // Calculate birthday
+//        LocalDate birthday = LocalDate.ofYearDay(year, dayOfYear);
+//
+//        // Calculate age
+//        int age = Period.between(birthday, LocalDate.now()).getYears();
+//
+//        return new NICValidationResult(true, birthday, age, gender);
+//    }
+//
+//    private NICValidationResult validateNewFormatNIC(String nic) {
+//        // Extract year, day of year, and gender
+//        String yearStr = nic.substring(0, 4);
+//        String dayStr = nic.substring(4, 7);
+//
+//        int year = Integer.parseInt(yearStr);
+//        int dayOfYear = Integer.parseInt(dayStr);
+//
+//        // Determine gender
+//        String gender;
+//        if (dayOfYear > 500) {
+//            gender = "Female";
+//            dayOfYear -= 500;
+//        } else {
+//            gender = "Male";
+//        }
+//
+//        // Validate day of year
+//        if (dayOfYear < 1 || dayOfYear > 366) {
+//            return new NICValidationResult(false, null, null, null);
+//        }
+//
+//        // Calculate birthday
+//        LocalDate birthday = LocalDate.ofYearDay(year, dayOfYear);
+//
+//        // Calculate age
+//        int age = Period.between(birthday, LocalDate.now()).getYears();
+//
+//        return new NICValidationResult(true, birthday, age, gender);
+//    }
 
     public List<NICRecord> getAllRecords() {
         return nicRecordRepository.findAll();
