@@ -2,13 +2,13 @@ server:
   error:
     include-message: always
     include-stacktrace: always
-  port: 8083
+  port: 8084
 
 spring:
   application:
-    name: auth-service
+    name: file-service
   datasource:
-    url: jdbc:mysql://localhost:3306/authdb?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/filedb?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
     password: root123
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -24,6 +24,17 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-jwt:
-  secret: Um1zU2VjdXJlS2V5Rm9ySldUVG9rZW5HZW5lcmF0aW9uQW5kU2hvdWxkQmVLZXB0U2VjcmV0
-  expiration-ms: 86400000  # 24 hours in milliseconds
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+file:
+  upload:
+    path: /tmp/uploads
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

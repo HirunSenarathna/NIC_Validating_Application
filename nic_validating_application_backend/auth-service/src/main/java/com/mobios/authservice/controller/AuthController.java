@@ -1,18 +1,38 @@
 package com.mobios.authservice.controller;
 
+import com.mobios.authservice.dto.Request.LoginRequest;
+import com.mobios.authservice.dto.Request.RegistrationRequest;
+import com.mobios.authservice.dto.Response.JwtResponse;
+import com.mobios.authservice.dto.Response.RegistrationResponse;
+import com.mobios.authservice.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
+    private final AuthService authService;
+
     @GetMapping("/test")
     public String test(){
         System.out.println("test");
         return "test" ;
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<JwtResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
+        System.out.println(loginRequest);
+        return ResponseEntity.ok(authService.login(loginRequest));
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<RegistrationResponse> registerUser(@Valid @RequestBody RegistrationRequest registrationRequest) {
+        System.out.println(registrationRequest + "in auth controller");
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.registerUser(registrationRequest));
     }
 }
