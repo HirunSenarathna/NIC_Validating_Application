@@ -9,6 +9,7 @@
         <option value="$PROJECT_DIR$/nic_validating_application_backend/config-server/pom.xml" />
         <option value="$PROJECT_DIR$/nic_validating_application_backend/discovery-server/pom.xml" />
         <option value="$PROJECT_DIR$/nic_validating_application_backend/file-service/pom.xml" />
+        <option value="$PROJECT_DIR$/nic_validating_application_backend/nic-service/pom.xml" />
       </list>
     </option>
   </component>
