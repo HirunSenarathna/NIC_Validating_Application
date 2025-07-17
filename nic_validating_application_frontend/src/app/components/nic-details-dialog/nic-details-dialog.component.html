@@ -1,0 +1,65 @@
+<div class="dialog-container">
+  <div mat-dialog-title class="dialog-header">
+    <mat-icon class="header-icon">badge</mat-icon>
+    <span>NIC Details</span>
+    <button mat-icon-button (click)="dialogRef.close()" class="close-button">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div mat-dialog-content class="dialog-content">
+    <div class="details-grid">
+      <div class="detail-item">
+        <label>NIC Number:</label>
+        <span class="nic-number">{{ data.nicNumber }}</span>
+      </div>
+
+      <div class="detail-item">
+        <label>Birthday:</label>
+        <span>{{ formatDate(data.birthday) }}</span>
+      </div>
+
+      <div class="detail-item">
+        <label>Age:</label>
+        <span>{{ data.age }} years old</span>
+      </div>
+
+      <div class="detail-item">
+        <label>Gender:</label>
+        <span class="gender">{{ data.gender }}</span>
+      </div>
+
+      <div class="detail-item">
+        <label>Validity:</label>
+        <mat-chip-set>
+          <mat-chip [class]="data.isValid ? 'valid-chip' : 'invalid-chip'">
+            <mat-icon>{{ data.isValid ? 'check_circle' : 'error' }}</mat-icon>
+            {{ data.isValid ? 'Valid' : 'Invalid' }}
+          </mat-chip>
+        </mat-chip-set>
+      </div>
+
+      <div class="detail-item">
+        <label>Source File:</label>
+        <span class="file-name">{{ data.fileName }}</span>
+      </div>
+    </div>
+
+    <div class="additional-info" *ngIf="getAdditionalInfo()">
+      <h3>Additional Information</h3>
+      <div class="info-card">
+        <p><strong>Birth Year:</strong> {{ getBirthYear() }}</p>
+        <p><strong>Century:</strong> {{ getCentury() }}</p>
+        <p><strong>Age Group:</strong> {{ getAgeGroup() }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div mat-dialog-actions class="dialog-actions">
+    <button mat-button (click)="dialogRef.close()">Close</button>
+    <button mat-raised-button color="primary" (click)="copyToClipboard()">
+      <mat-icon>content_copy</mat-icon>
+      Copy NIC
+    </button>
+  </div>
+</div>

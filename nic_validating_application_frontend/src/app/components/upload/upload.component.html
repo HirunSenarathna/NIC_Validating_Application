@@ -1,0 +1,103 @@
+<div class="file-upload-container">
+  <h2>NIC Validation</h2>
+  
+  <div class="upload-section">
+    <div class="file-drop-area" (click)="fileInput.click()">
+      <input #fileInput type="file" multiple accept=".csv" (change)="onFileSelect($event)" style="display: none;">
+      <mat-icon>cloud_upload</mat-icon>
+      <p>Click to browse or drag and drop CSV files</p>
+      <p class="hint">Please upload exactly 4 CSV files containing NIC numbers</p>
+    </div>
+    
+    <div *ngIf="files.length > 0" class="file-list">
+      <div class="file-item" *ngFor="let file of files; let i = index">
+        <mat-icon>description</mat-icon>
+        <span class="file-name">{{ file.name }}</span>
+        <button mat-icon-button (click)="removeFile(i)">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+    
+    <div *ngIf="uploadProgress !== null" class="upload-progress">
+      <mat-progress-bar mode="determinate" [value]="uploadProgress"></mat-progress-bar>
+      <span>{{ uploadProgress }}%</span>
+    </div>
+    
+    <button mat-raised-button color="primary" (click)="uploadFiles()" [disabled]="files.length !== 4 || isUploading">
+      <span *ngIf="!isUploading">Upload Files</span>
+      <span *ngIf="isUploading">Uploading...</span>
+    </button>
+  </div>
+  
+  <!-- Current Session Files Section -->
+  <div class="current-session-section" *ngIf="currentSessionFiles.length > 0">
+    <h3>Current Session Files</h3>
+    <div class="current-files-list">
+      <div class="current-file-item" *ngFor="let file of currentSessionFiles">
+        <mat-icon color="primary">check_circle</mat-icon>
+        <span>{{ file.originalName }}</span>
+        <span class="upload-time">{{ file.uploadTime | date:'medium' }}</span>
+      </div>
+    </div>
+    
+    <!-- Optional manual validation button -->
+    <div class="actions">
+      <!-- <button mat-raised-button color="accent" (click)="validateCurrentFiles()">
+        Re-validate Files
+      </button> -->
+      <button mat-raised-button color="warn" (click)="clearCurrentSession()">
+        Clear Session
+      </button>
+    </div>
+  </div>
+  
+  <!-- Validation Results Section -->
+  <div class="validation-results" *ngIf="validationResults.length > 0">
+    <h3>Validation Results</h3>
+    <mat-table [dataSource]="validationResults" class="results-table">
+      <!-- NIC Column -->
+      <ng-container matColumnDef="nicNumber">
+        <mat-header-cell *matHeaderCellDef>NIC Number</mat-header-cell>
+        <mat-cell *matCellDef="let record">{{ record.nicNumber }}</mat-cell>
+      </ng-container>
+      
+      <!-- Birthday Column -->
+      <ng-container matColumnDef="birthday">
+        <mat-header-cell *matHeaderCellDef>Birthday</mat-header-cell>
+        <mat-cell *matCellDef="let record">{{ record.birthday | date }}</mat-cell>
+      </ng-container>
+      
+      <!-- Age Column -->
+      <ng-container matColumnDef="age">
+        <mat-header-cell *matHeaderCellDef>Age</mat-header-cell>
+        <mat-cell *matCellDef="let record">{{ record.age }}</mat-cell>
+      </ng-container>
+      
+      <!-- Gender Column -->
+      <ng-container matColumnDef="gender">
+        <mat-header-cell *matHeaderCellDef>Gender</mat-header-cell>
+        <mat-cell *matCellDef="let record">{{ record.gender }}</mat-cell>
+      </ng-container>
+      
+      <!-- Valid Column -->
+      <ng-container matColumnDef="isValid">
+        <mat-header-cell *matHeaderCellDef>Valid</mat-header-cell>
+        <mat-cell *matCellDef="let record">
+          <mat-icon [color]="record.isValid ? 'primary' : 'warn'">
+            {{ record.isValid ? 'check_circle' : 'cancel' }}
+          </mat-icon>
+        </mat-cell>
+      </ng-container>
+      
+      <!-- File Name Column -->
+      <ng-container matColumnDef="fileName">
+        <mat-header-cell *matHeaderCellDef>File Name</mat-header-cell>
+        <mat-cell *matCellDef="let record">{{ record.fileName }}</mat-cell>
+      </ng-container>
+      
+      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+    </mat-table>
+  </div>
+</div>
