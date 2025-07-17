@@ -14,10 +14,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -264,4 +262,90 @@ public class FileProcessingService {
                 "processedStatus", metadata.getProcessedStatus()
         );
     }
+
+    //
+
+    public Map<String, Object> getAllFileStatistics() {
+        List<FileMetadata> allFiles = fileMetadataRepository.findAll();
+
+        int totalFiles = allFiles.size();
+        int totalRecords = allFiles.stream().mapToInt(FileMetadata::getTotalRecords).sum();
+        int totalValidRecords = allFiles.stream().mapToInt(FileMetadata::getValidRecords).sum();
+        int totalInvalidRecords = allFiles.stream().mapToInt(FileMetadata::getInvalidRecords).sum();
+
+        Map<String, Object> statistics = new HashMap<>();
+        statistics.put("totalFiles", totalFiles);
+        statistics.put("totalRecords", totalRecords);
+        statistics.put("totalValidRecords", totalValidRecords);
+        statistics.put("totalInvalidRecords", totalInvalidRecords);
+
+        return statistics;
+    }
+
+    public List<Map<String, Object>> getUserActivityStatistics() {
+        List<Map<String, Object>> userActivity = new ArrayList<>();
+
+        // Group files by user and count
+        Map<String, Long> userFileCount = fileMetadataRepository.findAll()
+                .stream()
+                .collect(Collectors.groupingBy(
+                        FileMetadata::getUploadedBy,
+                        Collectors.counting()
+                ));
+
+        userFileCount.forEach((username, fileCount) -> {
+            Map<String, Object> activity = new HashMap<>();
+            activity.put("username", username);
+            activity.put("fileCount", fileCount);
+            userActivity.add(activity);
+        });
+
+        return userActivity;
+    }
+
+    public List<Map<String, Object>> getProcessingTrends(Integer days) {
+        List<Map<String, Object>> processingTrends = new ArrayList<>();
+
+        int daysToShow = days != null ? days : 30;
+        LocalDateTime startDate = LocalDateTime.now().minusDays(daysToShow);
+
+        // Filter files uploaded within the specified range
+        List<FileMetadata> recentFiles = fileMetadataRepository.findAll()
+                .stream()
+                .filter(file -> file.getUploadTime() != null && file.getUploadTime().isAfter(startDate))
+                .collect(Collectors.toList());
+
+        // Group files by upload date (yyyy-MM-dd)
+        Map<String, List<FileMetadata>> dailyFiles = recentFiles.stream()
+                .collect(Collectors.groupingBy(
+                        file -> file.getUploadTime().toLocalDate().toString()
+                ));
+
+        // Build trends for each day
+        dailyFiles.forEach((date, files) -> {
+            Map<String, Object> trend = new HashMap<>();
+            trend.put("date", date);
+            trend.put("recordCount", files.stream().mapToInt(FileMetadata::getTotalRecords).sum());
+            trend.put("fileCount", files.size());
+
+            // Compute average processing time in seconds
+            double avgProcessingTime = files.stream()
+                    .filter(file -> file.getProcessedTime() != null && file.getUploadTime() != null)
+                    .mapToLong(file ->
+                            java.time.Duration.between(file.getUploadTime(), file.getProcessedTime()).getSeconds()
+                    )
+                    .average()
+                    .orElse(0.0);
+
+            trend.put("avgProcessingTime", avgProcessingTime);
+
+            processingTrends.add(trend);
+        });
+
+        // Sort trends chronologically by date
+        processingTrends.sort(Comparator.comparing(trend -> (String) trend.get("date")));
+
+        return processingTrends;
+    }
+
 }

@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 
 @Entity
 @Table(name = "users")
@@ -40,6 +42,13 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
 
 
 }

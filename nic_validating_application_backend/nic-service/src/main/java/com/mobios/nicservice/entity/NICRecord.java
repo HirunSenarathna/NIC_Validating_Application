@@ -10,7 +10,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "nic_records")
+@Table(name = "nic_records",uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"nic_number", "file_name"})
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,7 +24,7 @@ public class NICRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nic_number", nullable = false, unique = true)
+    @Column(name = "nic_number", nullable = false)
     private String nicNumber;
 
     @Column(name = "birthday")

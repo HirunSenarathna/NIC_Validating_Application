@@ -19,49 +19,23 @@ spring:
               predicates:
                 - Path=/api/auth/**
 
-#        - id: user-users
-#          uri: lb:http://user-service
-#          predicates:
-#            - Path=/api/users/**
-#
-#        - id: user-auth
-#          uri: lb:http://user-service
-#          predicates:
-#            - Path=/api/auth/**
-#
-#        - id: user-customers
-#          uri: lb:http://user-service
-#          predicates:
-#            - Path=/api/customers/**
-#
-#
-#        - id: user-employees
-#          uri: lb:http://user-service
-#          predicates:
-#            - Path=/api/employees/**
-#
-#
-#        - id: menu-service
-#          uri: lb:http://menu-service
-#          predicates:
-#            - Path=/api/menu/**
-#        #          filters:
-#        #            - AuthenticationFilter
-#
-#        - id: order-service
-#          uri: lb:http://order-service
-#          predicates:
-#            - Path=/api/orders/**
-#
-#        - id: payment-service
-#          uri: lb:http://payment-service
-#          predicates:
-#            - Path=/api/payments/**
-#
-#        - id: notification-service
-#          uri: lb:http://notification-service
-#          predicates:
-#            - Path=/api/notifications/**
+            - id: file-service
+              uri: lb:http://file-service
+              predicates:
+                - Path=/api/files/**
+
+
+            - id: nic-service
+              uri: lb:http://nic-service
+              predicates:
+                - Path=/api/nic/**
+
+
+            - id: analytics-service
+              uri: lb:http://analytics-service
+              predicates:
+                - Path=/api/analytics/**
+
 
 
 
