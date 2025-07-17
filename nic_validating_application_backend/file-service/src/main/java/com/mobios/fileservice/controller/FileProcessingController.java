@@ -12,7 +12,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/files")
-@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class FileProcessingController {
 
@@ -118,6 +117,36 @@ public class FileProcessingController {
             );
 
             return ResponseEntity.ok(statistics);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/statistics/all")
+    public ResponseEntity<?> getAllFileStatistics() {
+        try {
+            Map<String, Object> statistics = fileProcessingService.getAllFileStatistics();
+            return ResponseEntity.ok(statistics);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+//    @GetMapping("/statistics/user-activity")
+//    public ResponseEntity<?> getUserActivityStatistics() {
+//        try {
+//            List<Map<String, Object>> userActivity = fileProcessingService.getUserActivityStatistics();
+//            return ResponseEntity.ok(userActivity);
+//        } catch (Exception e) {
+//            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+//        }
+//    }
+
+    @GetMapping("/statistics/processing-trends")
+    public ResponseEntity<?> getProcessingTrends(@RequestParam(required = false) Integer days) {
+        try {
+            List<Map<String, Object>> processingTrends = fileProcessingService.getProcessingTrends(days);
+            return ResponseEntity.ok(processingTrends);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

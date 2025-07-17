@@ -7,10 +7,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +19,9 @@ public class NICValidationService {
 
 
     private final NICRecordRepository nicRecordRepository;
+
+    // Month days - Sri Lanka NIC system uses 29 days for February regardless of leap year
+    private static final int[] MONTH_DAYS = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
     public Map<String, Object> validateNICNumbers(List<Map<String, Object>> fileData, String processedBy) {
         List<NICRecord> validatedRecords = new ArrayList<>();
@@ -29,7 +33,16 @@ public class NICValidationService {
             String fileName = (String) fileInfo.get("fileName");
             List<String> nicNumbers = (List<String>) fileInfo.get("nicNumbers");
 
+            Set<String> seenNICsInFile = new HashSet<>();
+
             for (String nicNumber : nicNumbers) {
+                if (seenNICsInFile.contains(nicNumber)) {
+                    System.out.println("Duplicate NIC in same file skipped: " + nicNumber);
+                    continue; // Skip duplicates within the same file
+                }
+
+                seenNICsInFile.add(nicNumber);
+
                 NICValidationResult result = validateNIC(nicNumber);
 
                 NICRecord record = new NICRecord(
@@ -53,7 +66,6 @@ public class NICValidationService {
             }
         }
 
-        // Save all records
         nicRecordRepository.saveAll(validatedRecords);
 
         return Map.of(
@@ -73,8 +85,8 @@ public class NICValidationService {
         nicNumber = nicNumber.trim().toUpperCase();
 
         try {
-            // Check if it's old format (9 digits + V) or new format (12 digits)
-            if (nicNumber.length() == 10 && nicNumber.endsWith("V") || nicNumber.endsWith("X")) {
+            // Check if it's old format (9 digits + V/X) or new format (12 digits)
+            if (nicNumber.length() == 10 && (nicNumber.endsWith("V") || nicNumber.endsWith("X"))) {
                 return validateOldFormatNIC(nicNumber);
             } else if (nicNumber.length() == 12 && nicNumber.matches("\\d{12}")) {
                 return validateNewFormatNIC(nicNumber);
@@ -124,26 +136,24 @@ public class NICValidationService {
             gender = "Male";
         }
 
-        // Validate day of year
-        if (dayOfYear < 1 || dayOfYear > 366) {
+
+        int actualDayOfYear = dayOfYear ;
+
+        // Validate day of year (should be 0-365 for 0-based system)
+        if (dayOfYear < 0 || dayOfYear > 365) {
             System.out.println("NIC invalid: Day of year " + dayOfYear + " out of range in NIC " + nic);
             return new NICValidationResult(false, null, null, null);
         }
 
-        // Explicit leap year check
-        boolean isLeapYear = LocalDate.of(year, 1, 1).isLeapYear();
-        if (dayOfYear == 366 && !isLeapYear) {
-            System.out.println("NIC invalid: Day 366 provided for non-leap year " + year + " in NIC " + nic);
-            return new NICValidationResult(false, null, null, null);
-        }
-
         try {
-            // Calculate birthday
-            LocalDate birthday = LocalDate.ofYearDay(year, dayOfYear);
+            // Calculate birthday using Sri Lankan NIC month system
+            LocalDate birthday = calculateBirthdayFromDayOfYear(year, actualDayOfYear);
+
             // Calculate age
             int age = Period.between(birthday, LocalDate.now()).getYears();
+
             return new NICValidationResult(true, birthday, age, gender);
-        } catch (DateTimeException e) {
+        } catch (Exception e) {
             System.out.println("NIC invalid: Invalid date for NIC " + nic + " - " + e.getMessage());
             return new NICValidationResult(false, null, null, null);
         }
@@ -179,97 +189,53 @@ public class NICValidationService {
             gender = "Male";
         }
 
-        // Validate day of year
-        if (dayOfYear < 1 || dayOfYear > 366) {
+
+        int actualDayOfYear = dayOfYear ;
+
+        // Validate day of year (should be 0-365 for 0-based system)
+        if (dayOfYear < 0 || dayOfYear > 365) {
             System.out.println("NIC invalid: Day of year " + dayOfYear + " out of range in NIC " + nic);
             return new NICValidationResult(false, null, null, null);
         }
 
-        // Explicit leap year check
-        boolean isLeapYear = LocalDate.of(year, 1, 1).isLeapYear();
-        if (dayOfYear == 366 && !isLeapYear) {
-            System.out.println("NIC invalid: Day 366 provided for non-leap year " + year + " in NIC " + nic);
-            return new NICValidationResult(false, null, null, null);
-        }
-
         try {
-            // Calculate birthday
-            LocalDate birthday = LocalDate.ofYearDay(year, dayOfYear);
+            // Calculate birthday using Sri Lankan NIC month system
+            LocalDate birthday = calculateBirthdayFromDayOfYear(year, actualDayOfYear);
+
             // Calculate age
             int age = Period.between(birthday, LocalDate.now()).getYears();
+
             return new NICValidationResult(true, birthday, age, gender);
-        } catch (DateTimeException e) {
+        } catch (Exception e) {
             System.out.println("NIC invalid: Invalid date for NIC " + nic + " - " + e.getMessage());
             return new NICValidationResult(false, null, null, null);
         }
     }
 
-//    private NICValidationResult validateOldFormatNIC(String nic) {
-//        // Extract year, day of year, and gender
-//        String yearStr = nic.substring(0, 2);
-//        String dayStr = nic.substring(2, 5);
-//
-//        int year = Integer.parseInt(yearStr);
-//        int dayOfYear = Integer.parseInt(dayStr);
-//
-//        // Determine century (assume birth year is between 1900-2099)
-//        if (year >= 0 && year <= 99) {
-//            year = (year <= 25) ? 2000 + year : 1900 + year;
-//        }
-//
-//        // Determine gender
-//        String gender;
-//        if (dayOfYear > 500) {
-//            gender = "Female";
-//            dayOfYear -= 500;
-//        } else {
-//            gender = "Male";
-//        }
-//
-//        // Validate day of year
-//        if (dayOfYear < 1 || dayOfYear > 366) {
-//            return new NICValidationResult(false, null, null, null);
-//        }
-//
-//        // Calculate birthday
-//        LocalDate birthday = LocalDate.ofYearDay(year, dayOfYear);
-//
-//        // Calculate age
-//        int age = Period.between(birthday, LocalDate.now()).getYears();
-//
-//        return new NICValidationResult(true, birthday, age, gender);
-//    }
-//
-//    private NICValidationResult validateNewFormatNIC(String nic) {
-//        // Extract year, day of year, and gender
-//        String yearStr = nic.substring(0, 4);
-//        String dayStr = nic.substring(4, 7);
-//
-//        int year = Integer.parseInt(yearStr);
-//        int dayOfYear = Integer.parseInt(dayStr);
-//
-//        // Determine gender
-//        String gender;
-//        if (dayOfYear > 500) {
-//            gender = "Female";
-//            dayOfYear -= 500;
-//        } else {
-//            gender = "Male";
-//        }
-//
-//        // Validate day of year
-//        if (dayOfYear < 1 || dayOfYear > 366) {
-//            return new NICValidationResult(false, null, null, null);
-//        }
-//
-//        // Calculate birthday
-//        LocalDate birthday = LocalDate.ofYearDay(year, dayOfYear);
-//
-//        // Calculate age
-//        int age = Period.between(birthday, LocalDate.now()).getYears();
-//
-//        return new NICValidationResult(true, birthday, age, gender);
-//    }
+
+    private LocalDate calculateBirthdayFromDayOfYear(int year, int dayOfYear) {
+        int month = 0;
+        int day = dayOfYear;
+
+        for (int i = 0; i < MONTH_DAYS.length; i++) {
+            if (day <= MONTH_DAYS[i]) {
+                month = i;
+                break;
+            }
+            day -= MONTH_DAYS[i];
+        }
+
+        // Handle edge case where calculated day exceeds actual month days
+
+        if (month == 1 && day == 29) { // February 29th
+            // For non-leap years, adjust to February 28th
+            if (!LocalDate.of(year, 1, 1).isLeapYear()) {
+                day = 28;
+            }
+        }
+
+        return LocalDate.of(year, month + 1, day); // month + 1 because LocalDate uses 1-based months
+    }
 
     public List<NICRecord> getAllRecords() {
         return nicRecordRepository.findAll();
@@ -305,6 +271,91 @@ public class NICValidationService {
         }
 
         return statistics;
+    }
+
+    public Map<String, Long> getGenderStatistics() {
+        Map<String, Long> genderStats = new HashMap<>();
+
+        // Assuming you have a way to determine gender from NIC
+        List<NICRecord> records = getAllRecords();
+
+        long maleCount = records.stream()
+                .filter(record -> record.getGender() != null && record.getGender().equalsIgnoreCase("MALE"))
+                .count();
+
+        long femaleCount = records.stream()
+                .filter(record -> record.getGender() != null && record.getGender().equalsIgnoreCase("FEMALE"))
+                .count();
+
+        long unknownCount = records.stream()
+                .filter(record -> record.getGender() == null ||
+                        (!record.getGender().equalsIgnoreCase("MALE") && !record.getGender().equalsIgnoreCase("FEMALE")))
+                .count();
+
+        genderStats.put("MALE", maleCount);
+        genderStats.put("FEMALE", femaleCount);
+        genderStats.put("UNKNOWN", unknownCount);
+
+        return genderStats;
+    }
+
+    public List<Map<String, Object>> getAgeDistribution() {
+        List<Map<String, Object>> ageDistribution = new ArrayList<>();
+        List<NICRecord> records = getAllRecords();
+
+        // Group records by age ranges
+        Map<String, Long> ageGroups = records.stream()
+                .filter(record -> record.getAge() != null)
+                .collect(Collectors.groupingBy(
+                        record -> {
+                            int age = record.getAge();
+                            if (age < 18) return "Under 18";
+                            else if (age < 25) return "18-24";
+                            else if (age < 35) return "25-34";
+                            else if (age < 45) return "35-44";
+                            else if (age < 55) return "45-54";
+                            else if (age < 65) return "55-64";
+                            else return "65+";
+                        },
+                        Collectors.counting()
+                ));
+
+        ageGroups.forEach((ageGroup, count) -> {
+            Map<String, Object> ageData = new HashMap<>();
+            ageData.put("ageGroup", ageGroup);
+            ageData.put("count", count);
+            ageDistribution.add(ageData);
+        });
+
+        return ageDistribution;
+    }
+
+    public List<Map<String, Object>> getMonthlyTrends(Integer months) {
+        List<Map<String, Object>> monthlyTrends = new ArrayList<>();
+        List<NICRecord> records = getAllRecords();
+
+        int monthsToShow = months != null ? months : 12;
+        LocalDateTime startDate = LocalDateTime.now().minusMonths(monthsToShow);
+
+        // Group records by month
+        Map<String, Long> monthlyData = records.stream()
+                .filter(record -> record.getValidationTime() != null && record.getValidationTime().isAfter(startDate))
+                .collect(Collectors.groupingBy(
+                        record -> record.getValidationTime().format(DateTimeFormatter.ofPattern("yyyy-MM")),
+                        Collectors.counting()
+                ));
+
+        monthlyData.forEach((month, count) -> {
+            Map<String, Object> monthData = new HashMap<>();
+            monthData.put("month", month);
+            monthData.put("recordCount", count);
+            monthlyTrends.add(monthData);
+        });
+
+        // Sort by month
+        monthlyTrends.sort((a, b) -> ((String) a.get("month")).compareTo((String) b.get("month")));
+
+        return monthlyTrends;
     }
 
     // Inner class for validation result

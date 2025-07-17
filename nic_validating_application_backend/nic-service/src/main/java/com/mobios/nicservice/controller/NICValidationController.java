@@ -10,8 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/nic")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/nic")
 @RequiredArgsConstructor
 public class NICValidationController {
 
@@ -75,6 +74,36 @@ public class NICValidationController {
         try {
             List<Map<String, Object>> statistics = nicValidationService.getFileStatistics();
             return ResponseEntity.ok(statistics);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/statistics/gender")
+    public ResponseEntity<?> getGenderStatistics() {
+        try {
+            Map<String, Long> genderStats = nicValidationService.getGenderStatistics();
+            return ResponseEntity.ok(genderStats);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/statistics/age-distribution")
+    public ResponseEntity<?> getAgeDistribution() {
+        try {
+            List<Map<String, Object>> ageDistribution = nicValidationService.getAgeDistribution();
+            return ResponseEntity.ok(ageDistribution);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/statistics/monthly-trends")
+    public ResponseEntity<?> getMonthlyTrends(@RequestParam(required = false) Integer months) {
+        try {
+            List<Map<String, Object>> monthlyTrends = nicValidationService.getMonthlyTrends(months);
+            return ResponseEntity.ok(monthlyTrends);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
