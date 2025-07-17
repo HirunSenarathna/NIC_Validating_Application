@@ -1,0 +1,155 @@
+<div class="report-generator-container">
+  <h2>Generate Report</h2>
+  
+  
+  <form [formGroup]="reportForm" (ngSubmit)="generateReport()">
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Report Type</mat-label>
+        <mat-select formControlName="reportType" (selectionChange)="onReportTypeChange($event.value)">
+          <mat-option *ngFor="let type of reportTypes" [value]="type">{{ type }}</mat-option>
+        </mat-select>
+        <mat-error *ngIf="reportForm.get('reportType')?.hasError('required')">Report type is required</mat-error>
+      </mat-form-field>
+      
+      <mat-form-field appearance="outline">
+        <mat-label>Format</mat-label>
+        <mat-select formControlName="format">
+          <mat-option *ngFor="let format of formats" [value]="format">{{ format }}</mat-option>
+        </mat-select>
+        <mat-error *ngIf="reportForm.get('format')?.hasError('required')">Format is required</mat-error>
+      </mat-form-field>
+    </div>
+    
+    <div *ngIf="reportForm.get('reportType')?.value === 'By File'" class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>File Name</mat-label>
+        <mat-select formControlName="fileName">
+          <mat-option *ngFor="let file of files" [value]="file">{{ file }}</mat-option>
+        </mat-select>
+        <mat-error *ngIf="reportForm.get('fileName')?.hasError('required')">File name is required</mat-error>
+        <mat-hint *ngIf="files.length === 0">No files available</mat-hint>
+      </mat-form-field>
+    </div>
+    
+    <div *ngIf="reportForm.get('reportType')?.value === 'By User'" class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>User</mat-label>
+        <input matInput formControlName="processedBy" placeholder="Enter username">
+        <mat-error *ngIf="reportForm.get('processedBy')?.hasError('required')">Username is required</mat-error>
+      </mat-form-field>
+    </div>
+    
+    <div *ngIf="reportForm.get('reportType')?.value === 'By Date Range'" class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Start Date</mat-label>
+        <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+        <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+        <mat-datepicker #startPicker></mat-datepicker>
+        <mat-error *ngIf="reportForm.get('startDate')?.hasError('required')">Start date is required</mat-error>
+      </mat-form-field>
+      
+      <mat-form-field appearance="outline">
+        <mat-label>End Date</mat-label>
+        <input matInput [matDatepicker]="endPicker" formControlName="endDate" [min]="reportForm.get('startDate')?.value">
+        <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+        <mat-datepicker #endPicker></mat-datepicker>
+        <mat-error *ngIf="reportForm.get('endDate')?.hasError('required')">End date is required</mat-error>
+        <mat-error *ngIf="reportForm.get('endDate')?.hasError('matDatepickerMin')">End date must be after start date</mat-error>
+      </mat-form-field>
+    </div>
+    
+    <div class="form-row">
+      <mat-checkbox formControlName="includeInvalid">Include Invalid Records</mat-checkbox>
+    </div>
+    
+
+    
+    <div class="form-actions">
+      <button 
+        mat-raised-button 
+        color="primary" 
+        type="submit"
+        [disabled]="isButtonDisabled()"
+      >
+        <span *ngIf="!isLoading">Generate Report</span>
+        <span *ngIf="isLoading">Generating...</span>
+        <mat-icon *ngIf="!isLoading">download</mat-icon>
+        <mat-spinner *ngIf="isLoading" diameter="20"></mat-spinner>
+      </button>
+      
+      <button 
+        mat-stroked-button 
+        color="primary" 
+        type="button"
+        (click)="previewReport()"
+        [disabled]="reportForm.invalid || isLoading || reportForm.get('reportType')?.value === 'By Date Range'"
+        class="preview-button"
+      >
+        <mat-icon>visibility</mat-icon>
+        Preview
+      </button>
+    </div>
+  </form>
+  
+  <div *ngIf="previewData.length > 0" class="report-preview">
+    <h3>Preview (First 10 Records)</h3>
+    <mat-table [dataSource]="previewData" class="preview-table">
+      <!-- NIC Column -->
+      <ng-container matColumnDef="nicNumber">
+        <mat-header-cell *matHeaderCellDef>NIC Number</mat-header-cell>
+        <mat-cell *matCellDef="let record">{{ record.nicNumber }}</mat-cell>
+      </ng-container>
+      
+      <!-- Birthday Column -->
+      <ng-container matColumnDef="birthday">
+        <mat-header-cell *matHeaderCellDef>Birthday</mat-header-cell>
+        <mat-cell *matCellDef="let record">{{ record.birthday | date:'mediumDate' }}</mat-cell>
+      </ng-container>
+      
+      <!-- Age Column -->
+      <ng-container matColumnDef="age">
+        <mat-header-cell *matHeaderCellDef>Age</mat-header-cell>
+        <mat-cell *matCellDef="let record">{{ record.age }}</mat-cell>
+      </ng-container>
+      
+      <!-- Gender Column -->
+      <ng-container matColumnDef="gender">
+        <mat-header-cell *matHeaderCellDef>Gender</mat-header-cell>
+        <mat-cell *matCellDef="let record">
+          <mat-icon [class.female]="record.gender === 'Female'">
+            {{ record.gender === 'Female' ? 'female' : 'male' }}
+          </mat-icon>
+          {{ record.gender }}
+        </mat-cell>
+      </ng-container>
+      
+      <!-- Valid Column -->
+      <ng-container matColumnDef="isValid">
+        <mat-header-cell *matHeaderCellDef>Valid</mat-header-cell>
+        <mat-cell *matCellDef="let record">
+          <mat-icon [color]="record.isValid ? 'primary' : 'warn'">
+            {{ record.isValid ? 'check_circle' : 'cancel' }}
+          </mat-icon>
+        </mat-cell>
+      </ng-container>
+      
+      <!-- File Name Column -->
+      <ng-container matColumnDef="fileName">
+        <mat-header-cell *matHeaderCellDef>File Name</mat-header-cell>
+        <mat-cell *matCellDef="let record">{{ record.fileName }}</mat-cell>
+      </ng-container>
+      
+      <mat-header-row *matHeaderRowDef="previewColumns"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: previewColumns;"></mat-row>
+    </mat-table>
+    
+    <div class="preview-footer">
+      <span class="preview-count">Showing {{ previewData.length }} records</span>
+      <button mat-button color="primary" (click)="clearPreview()">
+        <mat-icon>clear</mat-icon>
+        Clear Preview
+      </button>
+    </div>
+  </div>
+</div>
